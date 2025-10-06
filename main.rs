@@ -1,51 +1,32 @@
-use std::io;
-use std::io::Write;
+use axum::{
+    response::Html,
+    routing::get,
+    Router,
+};
+use std::net::SocketAddr;
+use tower_http::services::ServeDir;
 
-fn main() {
-    println!("Enter number: ");
-    let str1 = get_input();
+mod calculator;
+use calculator::calculate;
 
-    println!("Enter second number: ");
-    let str2 = get_input();
+#[tokio::main]
+async fn main() {
+    let app = Router::new()
+        .route("/", get(handler))
+        .route("/calculate", axum::routing::post(calculate))
+        .nest_service("/static", ServeDir::new("static"));
 
-    println!("Enter function (+, -, *, /): ");
-    let function = get_input();
-    match function.as_str() {
-        "+" => {
-            let num1 = str1.parse::<u64>().unwrap();
-            let num2 = str2.parse::<u64>().unwrap();
-            let answer = num1 + num2;
-            println!("Sum: {}", answer);
-        },
-        "-" => {
-            let num1 = str1.parse::<u64>().unwrap();
-            let num2 = str2.parse::<u64>().unwrap();
-            let answer = num1 - num2;
-            println!("Sum: {}", answer);
-        },
-        "*" => {
-            let num1 = str1.parse::<u64>().unwrap();
-            let num2 = str2.parse::<u64>().unwrap();
-            let answer = num1 * num2;
-            println!("Sum: {}", answer);
-        },
-        "/" => {
-            let num1 = str1.parse::<u64>().unwrap();
-            let num2 = str2.parse::<u64>().unwrap();
-            let answer = num1 / num2;
-            println!("Sum: {}", answer);
-        },
-        _ => {
-            println!("Invalid operation!");
-        }
-    }
+    let addr = SocketAddr::from(([127, 0, 0, 1], 3000));
+    println!("Listening on {}", addr);
+
+    axum::serve(
+        tokio::net::TcpListener::bind(addr).await.unwrap(),
+        app,
+    )
+    .await
+    .unwrap();
 }
 
-fn get_input() -> String {
-    print!("> ");
-    io::stdout().flush().unwrap();
-
-    let mut input = String::new();
-    io::stdin().read_line(&mut input).unwrap();
-    input.trim().to_string()
+async fn handler() -> Html<&'static str> {
+    Html(include_str!("../static/index.html"))
 }
